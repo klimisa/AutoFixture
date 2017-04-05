@@ -19,7 +19,9 @@ let build target configuration =
     let properties = [ "Configuration", configuration ] @ keyFile
 
     solutionsToBuild
-    |> MSBuild "" target properties
+    |> Seq.iter (fun s -> build (fun p -> { p with Verbosity = Some(Minimal)
+                                                   Targets = [target]
+                                                   Properties = properties }) s)
     |> ignore
 
 let clean   = build "Clean"
