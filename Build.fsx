@@ -1,14 +1,42 @@
 ﻿#r @"packages/FAKE.Core/tools/FakeLib.dll"
 
 open Fake
+open Fake.AssemblyInfoFile
 open Fake.Testing
 open System
+open System.Diagnostics;
+open System.Text.RegularExpressions
 
 let releaseFolder = "Release"
 let nunitToolsFolder = "Packages/NUnit.Runners.2.6.2/tools"
 let nuGetOutputFolder = "NuGetPackages"
 let solutionsToBuild = !! "Src/*.sln"
 let signKeyPath = FullName "Src/AutoFixture.snk"
+
+type GitVersion = { apiVersion:string; nugetVersion:string; }
+let getGitVersion = 
+    let desc = Git.CommandHelper.runSimpleGitCommand "" "describe --tags --long --match=v*"
+    // Example for regular: v3.50.2-288-g64fd5c5b, for prerelease: v3.50.2-alpha1-288-g64fd5c5b
+    let result = Regex.Match(desc, @"^v(?<maj>\d+)\.(?<min>\d+)\.(?<rev>\d+)(?<pre>-(alpha|beta|rc)\d*)?-(?<num>\d+)-g(?<sha>[a-z0-9]+)$", RegexOptions.IgnoreCase).Groups
+    let getMatch (name:string) = result.[name].Value
+    
+    let assemblyVer = sprintf "%s.%s.%s" (getMatch "maj") (getMatch "min") (getMatch "rev")    
+    let apiVer = sprintf "%s.0" assemblyVer
+    let nugetVer = sprintf "%s%s%s" assemblyVer (getMatch "pre") (match getMatch "num" with "0" -> "" | commitsSinceTag -> "." + commitsSinceTag)
+    
+    { apiVersion = apiVer ; nugetVersion = nugetVer }
+
+Target "PatchAssemblyVersions" (fun _ ->
+    let version = 
+        match getBuildParamOrDefault "version" "git" with
+        | "git"    -> getGitVersion
+        | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "nugetVersion" with "" -> custom | v -> v }
+
+    !! "Src/*/Properties/AssemblyInfo.*"
+    |> Seq.iter (fun f -> UpdateAttributes f [ Attribute.Version              version.apiVersion
+                                               Attribute.FileVersion          version.apiVersion
+                                               Attribute.InformationalVersion version.nugetVersion ])
+)
 
 let build target configuration =
     solutionsToBuild
@@ -124,9 +152,7 @@ Target "CleanNuGetPackages" (fun _ ->
 )
 
 Target "NuGetPack" (fun _ ->
-    let version = "Src/AutoFixture/bin/Release/Ploeh.AutoFixture.dll"
-                  |> GetAssemblyVersion
-                  |> (fun v -> sprintf "%i.%i.%i" v.Major v.Minor v.Build)
+    let version = FileVersionInfo.GetVersionInfo("Src/AutoFixture/bin/Release/Ploeh.AutoFixture.dll").ProductVersion
 
     let nuSpecFiles = !! "NuGet/*.nuspec"
 
@@ -177,11 +203,14 @@ Target "PublishNuGetAll" (fun _ -> ())
 "CleanVerify"  ==> "CleanAll"
 "CleanRelease" ==> "CleanAll"
 
-"CleanReleaseFolder" ==> "Verify"
-"CleanAll"           ==> "Verify"
 
-"Verify"    ==> "Build"
-"BuildOnly" ==> "Build"
+"CleanReleaseFolder"    ==> "Verify"
+"CleanAll"              ==> "Verify"
+"PatchAssemblyVersions" ==> "Verify"
+
+"PatchAssemblyVersions" ==> "Build"
+"Verify"                ==> "Build"
+"BuildOnly"             ==> "Build"
 
 "Build"    ==> "Test"
 "TestOnly" ==> "Test"
