@@ -13,7 +13,7 @@ let nuGetOutputFolder = "NuGetPackages"
 let solutionsToBuild = !! "Src/*.sln"
 let signKeyPath = FullName "Src/AutoFixture.snk"
 
-type GitVersion = { apiVersion:string; nugetVersion:string; }
+type GitVersion = { apiVersion:string; nugetVersion:string }
 let getGitVersion = 
     let desc = Git.CommandHelper.runSimpleGitCommand "" "describe --tags --long --match=v*"
     // Example for regular: v3.50.2-288-g64fd5c5b, for prerelease: v3.50.2-alpha1-288-g64fd5c5b
@@ -28,9 +28,9 @@ let getGitVersion =
 
 Target "PatchAssemblyVersions" (fun _ ->
     let version = 
-        match getBuildParamOrDefault "version" "git" with
+        match getBuildParamOrDefault "Version" "git" with
         | "git"    -> getGitVersion
-        | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "nugetVersion" with "" -> custom | v -> v }
+        | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "NugetVersion" with "" -> custom | v -> v }
 
     !! "Src/*/Properties/AssemblyInfo.*"
     |> Seq.iter (fun f -> UpdateAttributes f [ Attribute.Version              version.apiVersion
@@ -203,22 +203,19 @@ Target "PublishNuGetAll" (fun _ -> ())
 "CleanVerify"  ==> "CleanAll"
 "CleanRelease" ==> "CleanAll"
 
-
 "CleanReleaseFolder"    ==> "Verify"
 "CleanAll"              ==> "Verify"
-"PatchAssemblyVersions" ==> "Verify"
 
-"PatchAssemblyVersions" ==> "Build"
 "Verify"                ==> "Build"
+"PatchAssemblyVersions" ==> "Build"
 "BuildOnly"             ==> "Build"
 
 "Build"    ==> "Test"
 "TestOnly" ==> "Test"
 
-"BuildOnly" ==> "TestOnly"
-
-"BuildOnly" ==> "BuildAndTestOnly"
-"TestOnly"  ==> "BuildAndTestOnly"
+"BuildOnly" 
+    ==> "TestOnly"
+    ==> "BuildAndTestOnly"
 
 "Test" ==> "CopyToReleaseFolder"
 
@@ -230,8 +227,9 @@ Target "PublishNuGetAll" (fun _ -> ())
 "NuGetPack" ==> "PublishNuGetRelease"
 "NuGetPack" ==> "PublishNuGetPreRelease"
 
-"PublishNuGetRelease"
-    ==> "PublishNuGetPreRelease"
-    ==> "PublishNuGetAll"
+"PublishNuGetRelease"    ==> "PublishNuGetAll"
+"PublishNuGetPreRelease" ==> "PublishNuGetAll"
+
+
 
 RunTargetOrDefault "CompleteBuild"
