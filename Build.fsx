@@ -50,6 +50,11 @@ Target "CleanAll"           (fun _ -> ())
 Target "CleanVerify"        (fun _ -> build "Clean" "Verify" "" "")
 Target "CleanReleaseFolder" (fun _ -> CleanDir releaseFolder)
 
+Target "RestoreNuGetPackages" (fun _ ->
+    solutionsToBuild
+    |> Seq.iter (fun s -> RestoreMSSolutionPackages (fun p -> p) s)
+)
+
 Target "Verify" (fun _ -> rebuild "Verify")
 
 Target "BuildOnly" (fun _ -> rebuild "Release")
@@ -148,7 +153,8 @@ Target "PublishNuGetAll" (fun _ -> ())
 "CleanVerify"        ==> "CleanAll"
 "CleanReleaseFolder" ==> "CleanAll"
 
-"CleanAll"  ==> "Verify"
+"CleanAll"             ==> "Verify"
+"RestoreNuGetPackages" ==> "Verify"
 
 "Verify"                ==> "Build"
 "BuildOnly"             ==> "Build"
