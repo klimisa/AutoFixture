@@ -10,7 +10,7 @@ open System.Text.RegularExpressions
 let releaseFolder = "Release"
 let nunitToolsFolder = "Packages/NUnit.Runners.2.6.2/tools"
 let nuGetOutputFolder = "NuGetPackages"
-let solutionsToBuild = !! "Src/*.sln"
+let solutionsToBuild = !! "Src/AutoFixture.AllProjects.sln"
 let signKeyPath = FullName "Src/AutoFixture.snk"
 
 type GitVersion = { apiVersion:string; nugetVersion:string }
