@@ -1,34 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="$(SolutionDir)CommonProperties.props" />
+  
   <PropertyGroup>
     <TargetFrameworks>netstandard1.5;net45</TargetFrameworks>
+    <AssemblyTitle>AutoFixture</AssemblyTitle>
     <AssemblyName>Ploeh.AutoFixture</AssemblyName>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <CodeAnalysisCulture>en-US</CodeAnalysisCulture>
-    <CodeAnalysisRuleSet>..\AutoFixture.ruleset</CodeAnalysisRuleSet>
-    <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\AutoFixture.snk</AssemblyOriginatorKeyFile>
+    <Copyright>Copyright © Ploeh 2011</Copyright>
   </PropertyGroup>
+  
   <PropertyGroup Condition="'$(Configuration)'=='Debug'">
     <DefineConstants>TRACE;DEBUG</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Release'">
     <DefineConstants>TRACE;RELEASE</DefineConstants>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Verify'">
-    <DefineConstants>CODE_ANALYSIS</DefineConstants>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <RunCodeAnalysis>true</RunCodeAnalysis>
-    <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
-    <ErrorReport>prompt</ErrorReport>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-  </PropertyGroup>
-
-  <!-- A temp workaround as code analysis doesn't work due to unknown target. s-->
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)'=='Verify|netstandard1.5'">
-    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)'=='net45'">
@@ -37,6 +22,7 @@
   <PropertyGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
     <DefineConstants>$(DefineConstants);NETSTANDARD;NETSTANDARD1_5</DefineConstants>
   </PropertyGroup>
+  
   <ItemGroup Condition="'$(TargetFramework)'=='net45'">
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -48,6 +34,7 @@
     <PackageReference Include="System.Collections.NonGeneric" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
+  
   <ItemGroup>
     <CodeAnalysisDictionary Include="CodeAnalysisDictionary.xml" />
   </ItemGroup>

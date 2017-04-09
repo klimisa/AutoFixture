@@ -7,11 +7,10 @@ open System
 open System.Diagnostics;
 open System.Text.RegularExpressions
 
-let releaseFolder = "Release"
+let releaseFolder = "ReleaseArtifacts"
 let nunitToolsFolder = "Packages/NUnit.Runners.2.6.2/tools"
 let nuGetOutputFolder = "NuGetPackages"
 let solutionsToBuild = !! "Src/AutoFixture.AllProjects.sln"
-let signKeyPath = FullName "Src/AutoFixture.snk"
 
 type GitVersion = { apiVersion:string; nugetVersion:string }
 let getGitVersion = 
@@ -26,35 +25,29 @@ let getGitVersion =
     
     { apiVersion = apiVer ; nugetVersion = nugetVer }
 
-Target "PatchAssemblyVersions" (fun _ ->
-    let version = 
-        match getBuildParamOrDefault "Version" "git" with
-        | "git"    -> getGitVersion
-        | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "NugetVersion" with "" -> custom | v -> v }
-
-    !! "Src/*/Properties/AssemblyInfo.*"
-    |> Seq.iter (fun f -> UpdateAttributes f [ Attribute.Version              version.apiVersion
-                                               Attribute.FileVersion          version.apiVersion
-                                               Attribute.InformationalVersion version.nugetVersion ])
-)
-
-let build target configuration =
+let build target configuration version infoVersion =
     solutionsToBuild
     |> Seq.iter (fun s -> build (fun p -> { p with Verbosity = Some(Minimal)
                                                    Targets = [target]
                                                    Properties = 
                                                       [
                                                           "Configuration", configuration
-                                                          "AssemblyOriginatorKeyFile", signKeyPath
+                                                          "AssemblyVersion", version
+                                                          "InformationalVersion", infoVersion
                                                       ] }) s)
     |> ignore
 
-let clean   = build "Clean"
-let rebuild = build "Rebuild"
+let rebuild configuration =
+    let version = 
+        match getBuildParamOrDefault "Version" "git" with
+        | "git"    -> getGitVersion
+        | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "NugetVersion" with "" -> custom | v -> v }
+
+    build "Rebuild" configuration version.apiVersion version.nugetVersion
+
 
 Target "CleanAll"           (fun _ -> ())
-Target "CleanVerify"        (fun _ -> clean "Verify")
-Target "CleanRelease"       (fun _ -> clean "Release")
+Target "CleanVerify"        (fun _ -> build "Clean" "Verify" "" "")
 Target "CleanReleaseFolder" (fun _ -> CleanDir releaseFolder)
 
 Target "Verify" (fun _ -> rebuild "Verify")
@@ -92,58 +85,10 @@ Target "Build" (fun _ -> ())
 Target "Test"  (fun _ -> ())
 
 Target "CopyToReleaseFolder" (fun _ ->
-    let buildOutput = [
-      "Src/AutoFixture/bin/Release/Ploeh.AutoFixture.dll";
-      "Src/AutoFixture/bin/Release/Ploeh.AutoFixture.pdb";
-      "Src/AutoFixture/bin/Release/Ploeh.AutoFixture.XML";
-      "Src/SemanticComparison/bin/Release/Ploeh.SemanticComparison.dll";
-      "Src/SemanticComparison/bin/Release/Ploeh.SemanticComparison.pdb";
-      "Src/SemanticComparison/bin/Release/Ploeh.SemanticComparison.XML";
-      "Src/AutoMoq/bin/Release/Ploeh.AutoFixture.AutoMoq.dll";
-      "Src/AutoMoq/bin/Release/Ploeh.AutoFixture.AutoMoq.pdb";
-      "Src/AutoMoq/bin/Release/Ploeh.AutoFixture.AutoMoq.XML";
-      "Src/AutoRhinoMock/bin/Release/Ploeh.AutoFixture.AutoRhinoMock.dll";
-      "Src/AutoRhinoMock/bin/Release/Ploeh.AutoFixture.AutoRhinoMock.pdb";
-      "Src/AutoRhinoMock/bin/Release/Ploeh.AutoFixture.AutoRhinoMock.XML";
-      "Src/AutoFakeItEasy/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy.dll";
-      "Src/AutoFakeItEasy/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy.pdb";
-      "Src/AutoFakeItEasy/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy.XML";
-      "Src/AutoFakeItEasy2/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy2.dll";
-      "Src/AutoFakeItEasy2/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy2.pdb";
-      "Src/AutoFakeItEasy2/bin/Release/Ploeh.AutoFixture.AutoFakeItEasy2.XML";
-      "Src/AutoNSubstitute/bin/Release/Ploeh.AutoFixture.AutoNSubstitute.dll";
-      "Src/AutoNSubstitute/bin/Release/Ploeh.AutoFixture.AutoNSubstitute.pdb";
-      "Src/AutoNSubstitute/bin/Release/Ploeh.AutoFixture.AutoNSubstitute.XML";
-      "Src/AutoFoq/bin/Release/Ploeh.AutoFixture.AutoFoq.dll";
-      "Src/AutoFoq/bin/Release/Ploeh.AutoFixture.AutoFoq.pdb";
-      "Src/AutoFoq/bin/Release/Ploeh.AutoFixture.AutoFoq.XML";
-      "Src/AutoFixture.xUnit.net/bin/Release/Ploeh.AutoFixture.Xunit.dll";
-      "Src/AutoFixture.xUnit.net/bin/Release/Ploeh.AutoFixture.Xunit.pdb";
-      "Src/AutoFixture.xUnit.net/bin/Release/Ploeh.AutoFixture.Xunit.XML";
-      "Src/AutoFixture.xUnit.net2/bin/Release/Ploeh.AutoFixture.Xunit2.dll";
-      "Src/AutoFixture.xUnit.net2/bin/Release/Ploeh.AutoFixture.Xunit2.pdb";
-      "Src/AutoFixture.xUnit.net2/bin/Release/Ploeh.AutoFixture.Xunit2.XML";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.dll";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.pdb";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.XML";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.Addins.dll";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.Addins.pdb";
-      "Src/AutoFixture.NUnit2/bin/Release/Ploeh.AutoFixture.NUnit2.Addins.XML";
-      "Src/AutoFixture.NUnit3/bin/Release/Ploeh.AutoFixture.NUnit3.dll";
-      "Src/AutoFixture.NUnit3/bin/Release/Ploeh.AutoFixture.NUnit3.pdb";
-      "Src/AutoFixture.NUnit3/bin/Release/Ploeh.AutoFixture.NUnit3.XML";
-      "Src/Idioms/bin/Release/Ploeh.AutoFixture.Idioms.dll";
-      "Src/Idioms/bin/Release/Ploeh.AutoFixture.Idioms.pdb";
-      "Src/Idioms/bin/Release/Ploeh.AutoFixture.Idioms.XML";
-      "Src/Idioms.FsCheck/bin/Release/Ploeh.AutoFixture.Idioms.FsCheck.dll";
-      "Src/Idioms.FsCheck/bin/Release/Ploeh.AutoFixture.Idioms.FsCheck.pdb";
-      "Src/Idioms.FsCheck/bin/Release/Ploeh.AutoFixture.Idioms.FsCheck.XML";
-      nunitToolsFolder @@ "lib/nunit.core.interfaces.dll"
-    ]
     let nuGetPackageScripts = !! "NuGet/*.ps1" ++ "NuGet/*.txt" ++ "NuGet/*.pp" |> List.ofSeq
-    let releaseFiles = buildOutput @ nuGetPackageScripts
+    let filesToCopy = [ nunitToolsFolder @@ "lib/nunit.core.interfaces.dll" ] @ nuGetPackageScripts
 
-    releaseFiles
+    filesToCopy
     |> CopyFiles releaseFolder
 )
 
@@ -152,7 +97,7 @@ Target "CleanNuGetPackages" (fun _ ->
 )
 
 Target "NuGetPack" (fun _ ->
-    let version = FileVersionInfo.GetVersionInfo("Src/AutoFixture/bin/Release/Ploeh.AutoFixture.dll").ProductVersion
+    let version = FileVersionInfo.GetVersionInfo(releaseFolder @@ "AutoFixture\\net45\\Ploeh.AutoFixture.dll").ProductVersion
 
     let nuSpecFiles = !! "NuGet/*.nuspec"
 
@@ -200,14 +145,12 @@ Target "PublishNuGetRelease" (fun _ -> publishPackagesToNuGet
 Target "CompleteBuild" (fun _ -> ())
 Target "PublishNuGetAll" (fun _ -> ()) 
 
-"CleanVerify"  ==> "CleanAll"
-"CleanRelease" ==> "CleanAll"
+"CleanVerify"        ==> "CleanAll"
+"CleanReleaseFolder" ==> "CleanAll"
 
-"CleanReleaseFolder"    ==> "Verify"
-"CleanAll"              ==> "Verify"
+"CleanAll"  ==> "Verify"
 
 "Verify"                ==> "Build"
-"PatchAssemblyVersions" ==> "Build"
 "BuildOnly"             ==> "Build"
 
 "Build"    ==> "Test"
