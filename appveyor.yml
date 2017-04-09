@@ -28,35 +28,35 @@ build_script:
       if($publishToProd)
       {
         Write-Host "Trigger tag build & push to all feeds. Tag name: $tagName" -ForegroundColor Green
-        & .\build.cmd PublishNuGetAll NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" NuGetReleaseKey="$($Env:NUGET_API_KEY)" Version=git
+        & .\build.cmd PublishNuGetAll NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" NuGetReleaseKey="$($Env:NUGET_API_KEY)" BuildVersion=git
       }
       elseif ($isSemVerTag)
       {
         Write-Host "Trigger tag build & push to pre-prod feed only. Tag name: $tagName" -ForegroundColor Green
-        & .\build.cmd PublishNuGetPreRelease NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" Version=git
+        & .\build.cmd PublishNuGetPreRelease NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" BuildVersion=git
       }
       else
       {
         Write-Host "Trigger tag build only - this is not a SemVer tag. Tag name: $tagName" -ForegroundColor Green
-        & .\build.cmd CompleteBuild Version=git
+        & .\build.cmd CompleteBuild BuildVersion=git
       }
     }
     #Should be checked _before_ branch name, because branch name is set to "base" branch for Pull Requests
     elseif($isPullRequest -eq $true)
     {
       Write-Host "Trigger PR verification build" -ForegroundColor Green
-      & .\build.cmd CompleteBuild Version=git
+      & .\build.cmd CompleteBuild BuildVersion=git
     } 
     elseif(($branchName -eq "master_playground") -or ($branchName -eq "v4")) 
     {
       Write-Host "Trigger full build & push to pre-release feed" -ForegroundColor Green
-      & .\build.cmd PublishNuGetPreRelease NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" Version=git
+      & .\build.cmd PublishNuGetPreRelease NuGetPreReleaseKey="$($Env:MYGET_API_KEY)" BuildVersion=git
     }
     else
     {
       # If this is a custom branch - just build the code without publishing the artifacts somewhere.
       Write-Host "Trigger build for a custom branch" -ForegroundColor Green
-      & .\build.cmd CompleteBuild Version=git
+      & .\build.cmd CompleteBuild BuildVersion=git
     }
 
 test_script:

@@ -39,7 +39,7 @@ let build target configuration version infoVersion =
 
 let rebuild configuration =
     let version = 
-        match getBuildParamOrDefault "Version" "git" with
+        match getBuildParamOrDefault "BuildVersion" "git" with
         | "git"    -> getGitVersion
         | custom -> { apiVersion = custom; nugetVersion = match getBuildParam "NugetVersion" with "" -> custom | v -> v }
 
